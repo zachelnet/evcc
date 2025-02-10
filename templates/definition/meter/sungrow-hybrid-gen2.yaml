@@ -1,4 +1,4 @@
-template: sungrow-hybrid
+template: sungrow-hybrid-gen2
 covers: ["sungrow"]
 products:
   - brand: Sungrow
@@ -7,8 +7,8 @@ products:
 capabilities: ["battery-control"]
 requirements:
   description:
-    de: Verbindungen über das WiNet-S-Dongle (WiFi oder LAN) funktionieren nur mit aktueller Firmware. Ältere Versionen liefern nicht alle benötigten Daten (Leistung, Ladestand).
-    en: Connections via the WiNet-S dongle (WiFi or LAN) only work with the latest firmware. Older versions do not provide all required data (power, state of charge).
+    de: Template für SHxxT/SHxxRT Wechselrichter mit verbindung über das WiNet-S-Dongle (WiFi oder LAN), funktionieren nur mit aktueller Firmware ab Dez. 2024 / Jan. 2025. Ältere Versionen liefern fehlerhafte Werte (Leistung, Ladestand).
+    en: Template for SHxxT/SHxxRT inverters with connection via the WiNet-S dongle (WiFi or LAN), only work with current firmware from Dec 2024  / Jan 2025 . Older versions provide incorrect values (power, charge level).
 params:
   - name: usage
     choice: ["grid", "pv", "battery"]
@@ -110,41 +110,24 @@ render: |
   {{- end }}
   {{- if eq .usage "battery" }}
   power:
-    source: go # handling old and new firmware
-    script: |
-      res := float64(-bp)
-      if (brs&0x4 > 0 || bc < 0) && bp >= 0 {
-        res = float64(bp)
-      }
-      res
-    in:
-    - name: brs
-      type: int
-      config:
-        source: modbus
-        {{- include "modbus" . | indent 6 }}
-        register:
-          type: input
-          address: 13000 # Battery running state
-          decode: uint16
-    - name: bc
-      type: int
-      config:
-        source: modbus
-        {{- include "modbus" . | indent 6 }}
-        register:
-          type: input
-          address: 13020 # Battery current
-          decode: uint16
-    - name: bp
-      type: int
-      config:
-        source: modbus
-        {{- include "modbus" . | indent 6 }}
-        register:
-          type: input
-          address: 13021 # Battery power
-          decode: int16
+    source: calc
+    mul:
+    - source: modbus
+      {{- include "modbus" . | indent 4 }}
+      timeout: {{ .timeout }}
+      register:
+        type: input
+        address: 13019 # Battery voltage
+        decode: uint16
+      scale: 0.1
+    - source: modbus
+      {{- include "modbus" . | indent 4 }}
+      timeout: {{ .timeout }}
+      register:
+        type: input
+        address: 13020 # Battery current
+        decode: int16
+      scale: 0.1
   energy:
     source: modbus
     {{- include "modbus" . | indent 2 }}
